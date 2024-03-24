@@ -8,14 +8,6 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import os
 
-# Create a directory to store speeding vehicle images
-output_dir = "speeding_images"
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-# Dictionary to store speeding vehicles' images and speeds
-speeding_vehicles = {}
-
 
 # getting Video
 cap = cv2.VideoCapture("input_video/input_video1.mp4")
@@ -33,6 +25,7 @@ fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 out = cv2.VideoWriter("output_video/output_video.mp4", fourcc, source_fps, (frame_width, frame_height))
 
 
+# getting color for each track_id
 def color(tracking_id):
     hue = (tracking_id * 137.5) % 360  # Change 137.5 to adjust the hue spread
     red, green, brown = colorsys.hsv_to_rgb(hue / 360, 1.0, 1.0)
@@ -53,11 +46,16 @@ source = np.array([[1252, 789], [2289, 789], [5039, 2159], [-550, 2159]])
 target = np.array([[0, 0], [target_width-1, 0], [target_width-1, target_height-1], [0, target_height-1]])
 transformation = BirdsEyeView(source, target, frame_width, frame_height, target_width, target_height)
 
+# Declaration
+prev_y_dict = {}  # Dictionary to store previous y-coordinate to calculate speeds
+speeding_vehicles = {}  # Dictionary to store speeding vehicles' images and speeds
+# Create a directory to store speeding vehicle images
+output_dir = "speeding_images"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
-# Dictionary to store previous y-coordinate
-prev_y_dict = {}
+ptime = 0  # Start Time to Calculate fps
 
-ptime = 0
 while True:
     rect, frame = cap.read()
 

@@ -106,6 +106,3 @@ class BirdsEyeView:
 
     def label_speed_on_canvas(self, speed, frame, color):
         cv2.putText(frame, f"{speed}", (self.x + 15, self.y + 20), 4, cv2.FONT_HERSHEY_PLAIN, color, 3)
-
-
-
