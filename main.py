@@ -37,21 +37,21 @@ while True:
     mask_inv = cv2.bitwise_not(mask)
     frame = cv2.bitwise_and(frame, mask_inv)
 
-    # results = model.track(frame, conf=0.1, imgsz=(frame_width, frame_height),
-    #                       persist=True, classes=[2, 7], tracker="bytetrack.yaml")
-    # for result in results:
-    #     for r in result.boxes.data.tolist():
-    #         x1, y1, x2, y2, track_id, conf, class_id = r
-    #         x1 = int(x1)
-    #         y1 = int(y1)
-    #         x2 = int(x2)
-    #         y2 = int(y2)
-    #         track_id = int(track_id)
-    #         class_id = int(class_id)
-    #
-    #         cv2.rectangle(frame, (x1, y1), (x2, y2), (225, 0, 0), 2)
-    #         cv2.putText(frame, ("car" if class_id == 2 else "truck" if class_id == 7 else None) + f" - {track_id}",
-    #                     (x1, y1 - 10), 3, cv2.FONT_HERSHEY_PLAIN, (225, 0, 0), 2)
+    results = model.track(frame, conf=0.1, imgsz=(frame_width, frame_height),
+                          persist=True, classes=[2, 7], tracker="bytetrack.yaml")
+    for result in results:
+        for r in result.boxes.data.tolist():
+            x1, y1, x2, y2, track_id, conf, class_id = r
+            x1 = int(x1)
+            y1 = int(y1)
+            x2 = int(x2)
+            y2 = int(y2)
+            track_id = int(track_id)
+            class_id = int(class_id)
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (225, 0, 0), 2)
+            cv2.putText(frame, ("car" if class_id == 2 else "truck" if class_id == 7 else None) + f" - {track_id}",
+                        (x1, y1 - 10), 3, cv2.FONT_HERSHEY_PLAIN, (225, 0, 0), 2)
 
     frame = cv2.add(frame, original_region)
     ctime = time()
