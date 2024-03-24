@@ -17,6 +17,8 @@ class BirdsEyeView:
         self.canvas_height = self.scale_canvas * target_height
         self.divide_canvas_width_in_parts = 7
         self.matrix = cv2.getPerspectiveTransform(source, target)
+        self.x = None
+        self.y = None
 
     def transform_points(self, points: np.ndarray) -> np.ndarray:
         reshaped_points = points.reshape(-1, 1, 2).astype(np.float32)
@@ -70,15 +72,40 @@ class BirdsEyeView:
 
         return frame
 
-    def draw_car_point(self, point, frame,  track_id):
-        x = int(point[0] * self.scale_canvas + self.canvas_origin_x)
-        y = int(point[1] * self.scale_canvas + self.canvas_origin_y)
+    def draw_car_point(self, point, frame,  track_id, color_id):
+        self.x = int(point[0] * self.scale_canvas + self.canvas_origin_x)
+        self.y = int(point[1] * self.scale_canvas + self.canvas_origin_y)
 
         strip_width = self.canvas_width / self.divide_canvas_width_in_parts
-        strip_index = int(x / strip_width)
-        x = int((strip_index + 0.5) * strip_width) + 20
+        strip_index = int(self.x / strip_width)
+        self.x = int((strip_index + 0.5) * strip_width) + 20
 
-        cv2.circle(frame, (x, y), 5, (225, 0, 0), -1)
-        cv2.putText(frame, f" {track_id}", (x, y - 5), 3, cv2.FONT_HERSHEY_PLAIN, (225, 0, 0), 2)
+        cv2.circle(frame, (self.x, self.y), 8, color_id, -1)
+        cv2.putText(frame, f" {track_id}", (self.x, self.y - 10), 4, cv2.FONT_HERSHEY_PLAIN, color_id, 3)
         return frame
+
+    @staticmethod
+    def speed_calculator(y_current, y_half_sec_ago, time_diff):
+        distance = abs(y_half_sec_ago - y_current)   # in meters
+        speed_m_s = distance / time_diff
+        speed_km_h = round(speed_m_s * 3.6, 3)
+
+        return speed_km_h
+
+    def speed_calculation(self, prev_y_dict, source_fps):
+        for divisor in range(2, source_fps):
+            try:
+                speed_km_h = self.speed_calculator(prev_y_dict[-1],
+                                                   prev_y_dict[-int((source_fps / divisor))],
+                                                   (1 / divisor))
+                if source_fps / divisor < 0:
+                    break
+                return int(speed_km_h)
+            except:
+                continue
+
+    def label_speed_on_canvas(self, speed, frame, color):
+        cv2.putText(frame, f"{speed}", (self.x + 15, self.y + 20), 4, cv2.FONT_HERSHEY_PLAIN, color, 3)
+
+
 
