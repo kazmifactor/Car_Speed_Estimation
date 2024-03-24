@@ -4,6 +4,17 @@ from time import time
 import numpy as np
 from birds_eye_view import BirdsEyeView
 import colorsys
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import os
+
+# Create a directory to store speeding vehicle images
+output_dir = "speeding_images"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+# Dictionary to store speeding vehicles' images and speeds
+speeding_vehicles = {}
 
 
 # getting Video
@@ -52,6 +63,7 @@ while True:
 
     if not rect:
         break
+    frame_for_ticket = frame.copy()
     mask = np.zeros_like(frame)
     cv2.fillPoly(mask, [np.array(road_polygon_points, dtype=np.int32)], (255, 255, 255))
     original_region = cv2.bitwise_and(frame, mask)
@@ -59,7 +71,7 @@ while True:
     frame = cv2.bitwise_and(frame, mask_inv)
     frame = transformation.draw_road(frame)
 
-    results = model.track(frame, conf=0.1, imgsz=(3840, 2176),
+    results = model.track(frame, conf=0.3, imgsz=(3840, 2176),
                           persist=True, classes=[2, 7], tracker="bytetrack.yaml", verbose=False)
 
     for result in results:
@@ -105,6 +117,16 @@ while True:
                             (int(bbox_center-label_width * text_scale), y2+33), 4, cv2.FONT_HERSHEY_PLAIN, (0, 0, 0), 2)
                 transformation.label_speed_on_canvas(speed, frame, color_id)
 
+                # Ticket Generation for cars with speed more than 120 km/h and trucks more than 100 km/h
+                if (class_id == 2 and speed > 120) or (class_id == 7 and speed > 100):
+                    if track_id not in speeding_vehicles:
+                        speeding_vehicles[track_id] = {"speed": speed, "images": []}
+
+                        # Save the image of the speeding vehicle along with its speed
+                    image_filename = f"speeding_vehicle_{track_id}_{speed}Kmph.jpg"
+                    cv2.imwrite(os.path.join(output_dir, image_filename), frame_for_ticket[y1:y2, x1:x2])
+                    speeding_vehicles[track_id]["images"].append((image_filename, speed))
+
     frame = cv2.add(frame, original_region)
     ctime = time()
     fps = round((1 / (ctime - ptime)), 2)
@@ -114,8 +136,28 @@ while True:
     cv2.imshow("Output", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    out.write(frame)
+    # out.write(frame)
 
 cap.release()
 out.release()
 cv2.destroyAllWindows()
+
+# After video processing ends, generate PDFs for each speeding vehicle
+for track_id, vehicle_data in speeding_vehicles.items():
+    pdf_filename = f"speeding_vehicle_{track_id}_ticket.pdf"
+    c = canvas.Canvas(os.path.join(output_dir, pdf_filename), pagesize=letter)
+
+    # Add details to the PDF
+    c.setFont("Helvetica", 12)
+    c.drawString(100, 750, f"Vehicle ID: {track_id}")
+    c.drawString(100, 730, f"Speed: {vehicle_data['speed']} Km/h")
+
+    # Draw images of the speeding vehicle along with speed
+    image_y = 500
+    for image_filename, speed in vehicle_data["images"]:
+        c.drawString(100, image_y - 20, f"Speed: {speed} Km/h")  # Add speed information
+        c.drawImage(os.path.join(output_dir, image_filename), 100, image_y, width=400, height=250)
+        image_y -= 300
+
+    # Save and close the PDF
+    c.save()
