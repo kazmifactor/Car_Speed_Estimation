@@ -49,6 +49,7 @@ transformation = BirdsEyeView(source, target, frame_width, frame_height, target_
 # Declaration
 prev_y_dict = {}  # Dictionary to store previous y-coordinate to calculate speeds
 speeding_vehicles = {}  # Dictionary to store speeding vehicles' images and speeds
+trails = {}  # Dictionary to store the trails for each track_id
 # Create a directory to store speeding vehicle images
 output_dir = "speeding_images"
 if not os.path.exists(output_dir):
@@ -86,6 +87,15 @@ while True:
             cv2.rectangle(frame, (x1, y1), (x2, y2), color_id, 5)
             cv2.putText(frame, ("car" if class_id == 2 else "truck" if class_id == 7 else None) + f" - {track_id}",
                         (x1, y1 - 10), 1, cv2.FONT_HERSHEY_COMPLEX, color_id, 3)
+
+            # Drawing trail behind the vehicle
+            if track_id not in trails:
+                trails[track_id] = []
+            trails[track_id].append((int((x1 + x2) / 2), int((y1 + y2) / 2)))
+            if len(trails[track_id]) > 10:  # Limiting the length of the trail
+                trails[track_id].pop(0)
+            for i in range(1, len(trails[track_id])):
+                cv2.line(frame, trails[track_id][i - 1], trails[track_id][i], color_id, 3)
 
             # Transformation and drawing on canvas
             bottom_center_point_bbox = (int((x1 + x2) / 2), y2)
@@ -134,7 +144,7 @@ while True:
     cv2.imshow("Output", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    # out.write(frame)
+    out.write(frame)
 
 cap.release()
 out.release()
